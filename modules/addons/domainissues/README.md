@@ -332,6 +332,9 @@ follow its links.
 
 ## 6. Changelog
 
+* **1.3.7** — design only: on the issue page the History card sits right under
+  Comments (above Audit), the two-column layout is kept down to 900 px wide
+  screens, and "Comments (N)" / "History (N)" buttons jump to those sections.
 * **1.3.6** — design only: admin pages and dashboard widget restyled in the
   TopHost design (`assets/dit.css`, `templates/_topbar.php`). No change to
   queries, filters, validation, hooks, cron or adapters; form fields, URLs and

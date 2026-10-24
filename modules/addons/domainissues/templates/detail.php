@@ -58,6 +58,8 @@ $activeTab = $isNew ? 'add' : (Types::isTransferType((string) $issue->issue_type
     <a class="dit-btn sm" href="<?= $view->url() ?>"><i class="fas fa-arrow-left"></i> <?= $view->t('ui.back_to_list') ?></a>
     <?php if (!$isNew): ?>
         <a class="dit-btn sm" href="<?= $view->url(['action' => 'add']) ?>"><i class="fas fa-plus"></i> <?= $view->t('ui.add_issue') ?></a>
+        <a class="dit-btn sm" href="#dit-comments"><i class="fas fa-comments"></i> <?= $view->t('detail.comments') ?> <span class="dit-badge neutral"><?= count($comments) ?></span></a>
+        <a class="dit-btn sm" href="#dit-history"><i class="fas fa-history"></i> <?= $view->t('detail.history') ?> <span class="dit-badge neutral"><?= count($logs) ?></span></a>
     <?php endif; ?>
 </div>
 
@@ -213,7 +215,7 @@ $activeTab = $isNew ? 'add' : (Types::isTransferType((string) $issue->issue_type
 
     <?php if (!$isNew): ?>
     <div>
-        <div class="dit-card">
+        <div class="dit-card" id="dit-comments">
             <div class="dit-card-head"><h3><i class="fas fa-comments"></i> <?= $view->t('detail.comments') ?></h3><span class="dit-badge neutral"><?= count($comments) ?></span></div>
 
             <?php if ($comments === []): ?>
@@ -237,26 +239,7 @@ $activeTab = $isNew ? 'add' : (Types::isTransferType((string) $issue->issue_type
             </form>
         </div>
 
-        <div class="dit-card">
-            <h3><i class="fas fa-info-circle"></i> <?= $view->t('detail.audit') ?></h3>
-            <table class="dit-kv">
-                <tr><th><?= $view->t('col.source') ?></th><td><?= $view->sourceBadge($issue->source) ?></td></tr>
-                <tr><th><?= $view->t('col.created') ?></th><td><?= $view->dateTime($issue->created_at) ?></td></tr>
-                <tr><th><?= $view->t('col.created_by') ?></th><td><?= $issue->created_by ? '#' . (int) $issue->created_by : $view->t('ui.system') ?></td></tr>
-                <tr><th><?= $view->t('col.updated') ?></th><td><?= $view->dateTime($issue->updated_at) ?></td></tr>
-                <tr><th><?= $view->t('col.resolved') ?></th><td><?= $view->dateTime($issue->resolved_at) ?></td></tr>
-                <?php if (!empty($issue->whmcs_domain_status)): ?>
-                    <tr><th><?= $view->t('col.whmcs_status') ?></th>
-                        <td><?= $view::e($issue->whmcs_domain_status) ?>
-                            <?php if (!empty($issue->whmcs_domain_expiry) && !str_starts_with((string) $issue->whmcs_domain_expiry, '0000')): ?>
-                                <span class="dit-muted dit-small">(exp. <?= $view::e($issue->whmcs_domain_expiry) ?>)</span>
-                            <?php endif; ?>
-                        </td></tr>
-                <?php endif; ?>
-            </table>
-        </div>
-
-        <div class="dit-card">
+        <div class="dit-card" id="dit-history">
             <h3><i class="fas fa-history"></i> <?= $view->t('detail.history') ?></h3>
             <?php if ($logs === []): ?>
                 <p class="dit-muted"><?= $view->t('detail.no_history') ?></p>
@@ -282,6 +265,25 @@ $activeTab = $isNew ? 'add' : (Types::isTransferType((string) $issue->issue_type
                 </table>
             <?php endif; ?>
         </div>
+        <div class="dit-card">
+            <h3><i class="fas fa-info-circle"></i> <?= $view->t('detail.audit') ?></h3>
+            <table class="dit-kv">
+                <tr><th><?= $view->t('col.source') ?></th><td><?= $view->sourceBadge($issue->source) ?></td></tr>
+                <tr><th><?= $view->t('col.created') ?></th><td><?= $view->dateTime($issue->created_at) ?></td></tr>
+                <tr><th><?= $view->t('col.created_by') ?></th><td><?= $issue->created_by ? '#' . (int) $issue->created_by : $view->t('ui.system') ?></td></tr>
+                <tr><th><?= $view->t('col.updated') ?></th><td><?= $view->dateTime($issue->updated_at) ?></td></tr>
+                <tr><th><?= $view->t('col.resolved') ?></th><td><?= $view->dateTime($issue->resolved_at) ?></td></tr>
+                <?php if (!empty($issue->whmcs_domain_status)): ?>
+                    <tr><th><?= $view->t('col.whmcs_status') ?></th>
+                        <td><?= $view::e($issue->whmcs_domain_status) ?>
+                            <?php if (!empty($issue->whmcs_domain_expiry) && !str_starts_with((string) $issue->whmcs_domain_expiry, '0000')): ?>
+                                <span class="dit-muted dit-small">(exp. <?= $view::e($issue->whmcs_domain_expiry) ?>)</span>
+                            <?php endif; ?>
+                        </td></tr>
+                <?php endif; ?>
+            </table>
+        </div>
+
     </div>
     <?php endif; ?>
 </div>
