@@ -27,6 +27,14 @@ use WHMCS\Module\Addon\DomainIssues\Types;
  *   - gone + type supported   -> auto-resolved with a system comment;
  *   - adapter cannot verify   -> untouched.
  * Manual issues are never closed automatically.
+ *
+ * Failed operations (transfer, registration, renewal) are only auto-resolved
+ * while the WHMCS domain status confirms the operation completed or is still
+ * running normally (see OPERATION_CLOSE_STATUSES). If the domain meanwhile went
+ * Expired / Grace / Redemption / Cancelled / Transferred Away (or disappeared
+ * from WHMCS), the adapter only checks the lifecycle and no longer looks at the
+ * operation, so "not reported" does not mean "fixed": the case stays open and
+ * gets one system comment explaining why.
  */
 final class Recheck
 {
@@ -38,6 +46,17 @@ final class Recheck
         'Expired' => Types::TYPE_REDEMPTION,
         'Grace' => Types::TYPE_REDEMPTION,
         'Redemption' => Types::TYPE_REDEMPTION,
+    ];
+
+    /**
+     * Operation issue type => WHMCS domain statuses in which an adapter that no
+     * longer reports the problem can be trusted (operation done, or still in
+     * flight and checked by the adapter). Any other status keeps the case open.
+     */
+    private const OPERATION_CLOSE_STATUSES = [
+        Types::TYPE_TRANSFER_IN => ['Active', 'Pending Transfer'],
+        Types::TYPE_REGISTRATION => ['Active', 'Pending', 'Pending Registration'],
+        Types::TYPE_RENEWAL => ['Active'],
     ];
 
     /** Run only if the configured interval has elapsed since the last run. */
@@ -55,11 +74,11 @@ final class Recheck
     }
 
     /**
-     * @return array{scanned:int, created_or_refreshed:int, checked:int, resolved:int, skipped:int, errors:int}
+     * @return array{scanned:int, created_or_refreshed:int, checked:int, resolved:int, kept_open:int, skipped:int, errors:int}
      */
     public static function run(): array
     {
-        $stats = ['scanned' => 0, 'created_or_refreshed' => 0, 'checked' => 0, 'resolved' => 0, 'skipped' => 0, 'errors' => 0];
+        $stats = ['scanned' => 0, 'created_or_refreshed' => 0, 'checked' => 0, 'resolved' => 0, 'kept_open' => 0, 'skipped' => 0, 'errors' => 0];
 
         if (!Installer::tablesExist()) {
             return $stats;
@@ -226,11 +245,50 @@ final class Recheck
                 if (isset($detectedTypes[$type]) || !in_array($type, $supported, true)) {
                     continue;
                 }
+                if (isset(self::OPERATION_CLOSE_STATUSES[$type])) {
+                    $whmcsStatus = self::currentWhmcsStatus($repo, $issue);
+                    if (!in_array($whmcsStatus, self::OPERATION_CLOSE_STATUSES[$type], true)) {
+                        self::noteKeptOpen($repo, $issue, $whmcsStatus);
+                        $stats['kept_open']++;
+                        continue;
+                    }
+                }
                 if ($service->resolveBySystem((int) $issue->id, Lang::t('comment.recheck_reason', [':registrar' => $registrar]))) {
                     $stats['resolved']++;
                 }
             }
         }
+    }
+
+    /** Current WHMCS status of the issue's domain ('' when the domain is no longer in WHMCS). */
+    private static function currentWhmcsStatus(IssueRepository $repo, object $issue): string
+    {
+        $row = null;
+        if (!empty($issue->domain_id)) {
+            $row = $repo->findDomainById((int) $issue->domain_id);
+        }
+        $row ??= $repo->findDomainByName(strtolower((string) $issue->domain_name));
+
+        return $row !== null ? (string) $row->status : '';
+    }
+
+    /**
+     * One system comment per WHMCS status explaining why the case was not closed,
+     * so the admin sees it in the history without a new comment on every cron run.
+     */
+    private static function noteKeptOpen(IssueRepository $repo, object $issue, string $whmcsStatus): void
+    {
+        $text = Lang::t('comment.kept_open', [
+            ':status' => $whmcsStatus !== '' ? $whmcsStatus : Lang::t('comment.not_in_whmcs'),
+            ':type' => Lang::label('type', (string) $issue->issue_type),
+        ]);
+        foreach ($repo->comments((int) $issue->id) as $comment) {
+            if ((string) $comment->comment === $text) {
+                return;
+            }
+        }
+        $repo->addComment((int) $issue->id, null, $text);
+        $repo->update((int) $issue->id, ['updated_at' => IssueRepository::now()]);
     }
 
     /**

@@ -169,6 +169,8 @@ $_ADDONLANG['error.invalid_request'] = 'Invalid request.';
 
 // System comments
 $_ADDONLANG['comment.auto_resolved'] = 'Automatically resolved: :reason';
+$_ADDONLANG['comment.kept_open'] = 'Not closed automatically: the domain is now ":status" in WHMCS, so the registrar no longer reports on the :type operation, but it was never confirmed as completed. Close this case manually once it is handled.';
+$_ADDONLANG['comment.not_in_whmcs'] = 'no longer in WHMCS';
 $_ADDONLANG['comment.recheck_reason'] = 'the :registrar adapter no longer reports this problem (cron re-check)';
 
 // Widget

@@ -125,6 +125,13 @@ from phase 1 are reused):
 * problem still reported → issue refreshed (dedup path);
 * problem no longer reported **and** the adapter lists that issue type in
   `supportedIssueTypes()` → issue auto-resolved with a system comment;
+  for failed operations (transfer in, registration, renewal) only while the
+  WHMCS domain status confirms the operation — transfer: Active / Pending
+  Transfer, registration: Active / Pending / Pending Registration, renewal:
+  Active. If the domain went Expired, Grace, Redemption, Cancelled, Transferred
+  Away or is no longer in WHMCS, the case stays open with one explanatory system
+  comment per status (the adapter then only checks the lifecycle, so "not
+  reported" does not mean "fixed");
 * otherwise → untouched. An API/transport error never resolves anything.
 
 Manual issues are never closed automatically. Adapter errors and every API
@@ -332,6 +339,14 @@ follow its links.
 
 ## 6. Changelog
 
+* **1.4.0** — cron: failed operations no longer disappear. An automatic
+  *Transfer in*, *Registration failed* or *Renewal failed* case is auto-resolved
+  only while the WHMCS domain status confirms the operation (transfer: Active or
+  still Pending Transfer; registration: Active or Pending / Pending Registration;
+  renewal: Active). If the domain meanwhile went Expired, Grace, Redemption,
+  Cancelled, Transferred Away or was removed from WHMCS, the case stays open and
+  gets one system comment per status ("Not closed automatically: …"). Close it
+  manually once handled. Manual cases are still never closed automatically.
 * **1.3.7** — design only: on the issue page the History card sits right under
   Comments (above Audit), the two-column layout is kept down to 900 px wide
   screens, and "Comments (N)" / "History (N)" buttons jump to those sections.
