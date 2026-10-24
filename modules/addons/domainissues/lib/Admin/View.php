@@ -11,9 +11,33 @@ use WHMCS\Module\Addon\DomainIssues\Types;
 /**
  * Tiny PHP template renderer with escaping/URL helpers for the admin pages.
  * Templates live in ../templates and receive $view (this object) plus the data array.
+ *
+ * Presentation follows the design shared by the other TopHost modules
+ * (Bank Reconciliation, eFactura): styles in assets/dit.css, prefix dit-.
  */
 final class View
 {
+    /** Pill colour per status / priority (TopHost palette: warm = needs action, cool = information). */
+    private const STATUS_COLOURS = [
+        Types::STATUS_NEW => 'red',
+        Types::STATUS_IN_PROGRESS => 'yellow',
+        Types::STATUS_WAITING_CLIENT => 'blue',
+        Types::STATUS_RESOLVED => 'green',
+        Types::STATUS_CANCELLED => 'gray',
+    ];
+    private const PRIORITY_COLOURS = [
+        Types::PRIORITY_LOW => 'gray',
+        Types::PRIORITY_NORMAL => 'neutral',
+        Types::PRIORITY_HIGH => 'red',
+    ];
+    /** Flash type (Bootstrap alert name used by the controller) => message bar class. */
+    private const FLASH_BARS = [
+        'success' => 'dit-okbar',
+        'info' => 'dit-infobar',
+        'warning' => 'dit-warnbar',
+        'danger' => 'dit-warnbar',
+    ];
+
     private string $templateDir;
 
     public function __construct(private readonly string $moduleLink)
@@ -85,6 +109,47 @@ final class View
         return $this->moduleLink . ($query !== '' ? '&' . $query : '');
     }
 
+    /**
+     * Public URL of the assets folder. Admin pages run from the (renamable) admin
+     * directory, so the configured SystemURL is preferred over a relative path.
+     */
+    public static function assetsUrl(): string
+    {
+        $base = '';
+        try {
+            if (class_exists('\\WHMCS\\Config\\Setting')) {
+                $base = (string) \WHMCS\Config\Setting::getValue('SystemURL');
+            }
+        } catch (\Throwable $e) {
+        }
+        if ($base === '' && !empty($GLOBALS['CONFIG']['SystemURL'])) {
+            $base = (string) $GLOBALS['CONFIG']['SystemURL'];
+        }
+        if ($base !== '' && !empty($_SERVER['HTTPS']) && str_starts_with($base, 'http://')) {
+            $base = 'https://' . substr($base, 7); // avoid mixed content when the admin runs over HTTPS
+        }
+
+        return ($base !== '' ? rtrim($base, '/') : '..') . '/modules/addons/' . Config::MODULE . '/assets';
+    }
+
+    /** Flash message as a TopHost message bar. @param array{type:string,text:string}|null $flash */
+    public function flashBar(?array $flash): string
+    {
+        if (!$flash) {
+            return '';
+        }
+        $class = self::FLASH_BARS[$flash['type']] ?? 'dit-infobar';
+        $icon = $class === 'dit-okbar' ? '&#10003; ' : ($class === 'dit-warnbar' ? '&#9888; ' : '');
+
+        return '<div class="' . $class . '">' . $icon . self::e($flash['text']) . '</div>';
+    }
+
+    /** Pill badge in one of the palette colours: green, yellow, red, blue, gray, neutral. */
+    public function pill(string $escapedLabel, string $colour): string
+    {
+        return '<span class="dit-badge ' . self::e($colour) . '">' . $escapedLabel . '</span>';
+    }
+
     public function csrf(): string
     {
         return function_exists('generate_token') ? (string) generate_token('WHMCS.admin.default') : '';
@@ -92,23 +157,25 @@ final class View
 
     public function statusBadge(?string $status): string
     {
-        $css = Types::STATUS_CSS[$status] ?? 'label-default';
+        if ($status === null || $status === '') {
+            return '<span class="dit-dash">&mdash;</span>';
+        }
 
-        return '<span class="label ' . $css . '">' . $this->label('status', $status) . '</span>';
+        return $this->pill($this->label('status', $status), self::STATUS_COLOURS[$status] ?? 'neutral');
     }
 
     public function priorityBadge(?string $priority): string
     {
-        $css = Types::PRIORITY_CSS[$priority] ?? 'label-default';
+        if ($priority === null || $priority === '') {
+            return '<span class="dit-dash">&mdash;</span>';
+        }
 
-        return '<span class="label ' . $css . '">' . $this->label('priority', $priority) . '</span>';
+        return $this->pill($this->label('priority', $priority), self::PRIORITY_COLOURS[$priority] ?? 'neutral');
     }
 
     public function sourceBadge(?string $source): string
     {
-        $css = $source === Types::SOURCE_AUTOMATIC ? 'label-primary' : 'label-default';
-
-        return '<span class="label ' . $css . '">' . $this->label('source', $source) . '</span>';
+        return $this->pill($this->label('source', $source), $source === Types::SOURCE_AUTOMATIC ? 'blue' : 'neutral');
     }
 
     /**
@@ -118,22 +185,22 @@ final class View
     public function deadlineCell(?string $deadline, ?int $thresholdDays = null): string
     {
         if ($deadline === null || $deadline === '') {
-            return '<span class="text-muted">&mdash;</span>';
+            return '<span class="dit-dash">&mdash;</span>';
         }
         $thresholdDays ??= Config::deadlineThresholdDays();
         $days = self::daysUntil($deadline);
 
         if ($days < 0) {
-            $badge = '<span class="label label-danger">' . $this->t('deadline.overdue', [':days' => abs($days)]) . '</span>';
+            $badge = $this->pill($this->t('deadline.overdue', [':days' => abs($days)]), 'red');
         } elseif ($days === 0) {
-            $badge = '<span class="label label-danger">' . $this->t('deadline.today') . '</span>';
+            $badge = $this->pill($this->t('deadline.today'), 'red');
         } elseif ($days <= $thresholdDays) {
-            $badge = '<span class="label label-danger">' . $this->t('deadline.days_left', [':days' => $days]) . '</span>';
+            $badge = $this->pill($this->t('deadline.days_left', [':days' => $days]), 'red');
         } else {
-            $badge = '<span class="text-muted">' . $this->t('deadline.days_left', [':days' => $days]) . '</span>';
+            $badge = $this->pill($this->t('deadline.days_left', [':days' => $days]), 'gray');
         }
 
-        return self::e($deadline) . ' ' . $badge;
+        return '<span class="dit-nowrap">' . self::e($deadline) . '</span> ' . $badge;
     }
 
     public static function daysUntil(string $date): int
@@ -165,7 +232,7 @@ final class View
     public function clientLink(?int $clientId, ?string $name): string
     {
         if ($clientId === null || $clientId === 0) {
-            return '<span class="text-muted">&mdash;</span>';
+            return '<span class="dit-dash">&mdash;</span>';
         }
         $text = $name !== null && $name !== '' ? $name : '#' . $clientId;
 
@@ -179,7 +246,7 @@ final class View
         }
         $url = 'clientsdomains.php?id=' . (int) $domainId . ($clientId ? '&userid=' . (int) $clientId : '');
 
-        return '<a href="' . self::e($url) . '" target="_blank" title="' . $this->t('ui.open_in_whmcs') . '">'
+        return '<a href="' . self::e($url) . '" target="_blank" class="dit-ext" title="' . $this->t('ui.open_in_whmcs') . '">'
             . '<i class="fas fa-external-link-alt"></i></a>';
     }
 
@@ -199,7 +266,7 @@ final class View
     public function dateTime(?string $value): string
     {
         if ($value === null || $value === '' || str_starts_with($value, '0000')) {
-            return '<span class="text-muted">&mdash;</span>';
+            return '<span class="dit-dash">&mdash;</span>';
         }
 
         return self::e(substr($value, 0, 16));
@@ -217,7 +284,7 @@ final class View
         return $html;
     }
 
-    /** Bootstrap 3 pagination preserving the given query params. */
+    /** Pager in the TopHost style (page buttons), preserving the given query params. */
     public function pagination(int $page, int $perPage, int $total, array $params): string
     {
         $pages = (int) max(1, ceil($total / max(1, $perPage)));
@@ -227,13 +294,15 @@ final class View
         $page = min(max(1, $page), $pages);
 
         $item = function (int $p, string $label, bool $active = false, bool $disabled = false) use ($params): string {
-            $cls = $active ? ' class="active"' : ($disabled ? ' class="disabled"' : '');
-            $href = $disabled || $active ? '#' : $this->url(array_merge($params, ['page' => $p]));
+            if ($disabled) {
+                return '<span class="dit-btn sm" aria-disabled="true" style="opacity:.45;cursor:default">' . $label . '</span>';
+            }
+            $href = $active ? '#' : $this->url(array_merge($params, ['page' => $p]));
 
-            return '<li' . $cls . '><a href="' . $href . '">' . $label . '</a></li>';
+            return '<a class="dit-btn sm' . ($active ? ' blue' : '') . '" href="' . $href . '">' . $label . '</a>';
         };
 
-        $html = '<ul class="pagination pagination-sm">';
+        $html = '<div class="dit-pages">';
         $html .= $item(max(1, $page - 1), '&laquo;', false, $page === 1);
 
         $window = 3;
@@ -242,7 +311,7 @@ final class View
         if ($start > 1) {
             $html .= $item(1, '1');
             if ($start > 2) {
-                $html .= '<li class="disabled"><span>&hellip;</span></li>';
+                $html .= '<span class="dit-muted">&hellip;</span>';
             }
         }
         for ($p = $start; $p <= $end; $p++) {
@@ -250,13 +319,13 @@ final class View
         }
         if ($end < $pages) {
             if ($end < $pages - 1) {
-                $html .= '<li class="disabled"><span>&hellip;</span></li>';
+                $html .= '<span class="dit-muted">&hellip;</span>';
             }
             $html .= $item($pages, (string) $pages);
         }
 
         $html .= $item(min($pages, $page + 1), '&raquo;', false, $page === $pages);
-        $html .= '</ul>';
+        $html .= '</div>';
 
         return $html;
     }

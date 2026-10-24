@@ -302,9 +302,24 @@ modules/addons/domainissues/
 │   ├── Cron/Recheck.php      periodic re-check
 │   ├── Hooks/RegistrarFailureHandler.php
 │   └── Widget/DashboardWidget.php
-├── templates/list.php, detail.php
+├── templates/list.php, detail.php, _topbar.php
+├── assets/dit.css            admin styles (TopHost design, prefix dit-)
 └── lang/english.php
 ```
+
+### Design
+
+Since 1.3.6 the admin pages use the design shared by the other TopHost modules
+(Bank Reconciliation, eFactura SFS Moldova): gradient top bar with pill tabs,
+cards, pill badges and the common palette (warm colours = needs action, cool
+colours = information). All styles live in `assets/dit.css` under the `dit-`
+prefix, so nothing leaks into the WHMCS theme. The stylesheet is loaded from
+`<SystemURL>/modules/addons/domainissues/assets/`; if the pages look unstyled,
+check *System Settings → General → System URL*.
+
+The top bar tabs are plain links to existing list filters (`type=cat:transfers`,
+`type=cat:other`) and to the add form. Settings stay on the WHMCS
+*Addon Modules → Configure* page.
 
 Security: all DB access through `WHMCS\Database\Capsule` (prepared statements);
 every POST is protected by the WHMCS admin CSRF token (`check_token`);
@@ -315,7 +330,16 @@ follow its links.
 
 ---
 
-## 6. Database
+## 6. Changelog
+
+* **1.3.6** — design only: admin pages and dashboard widget restyled in the
+  TopHost design (`assets/dit.css`, `templates/_topbar.php`). No change to
+  queries, filters, validation, hooks, cron or adapters; form fields, URLs and
+  JavaScript IDs are identical to 1.3.5.
+
+---
+
+## 7. Database
 
 `mod_domainissues` — one row per case (`domain_name`, `issue_type`,
 `issue_subtype`, `source`, `status`, `priority`, `deadline`, `details`,

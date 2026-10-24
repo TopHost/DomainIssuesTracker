@@ -69,6 +69,7 @@ $_ADDONLANG['field.domain_id'] = 'WHMCS domain ID';
 
 // Generic UI
 $_ADDONLANG['ui.title'] = 'Domain Issues';
+$_ADDONLANG['ui.all_issues'] = 'All issues';
 $_ADDONLANG['ui.add_issue'] = 'Add issue';
 $_ADDONLANG['ui.edit_issue'] = 'Edit issue';
 $_ADDONLANG['ui.back_to_list'] = 'Back to list';
@@ -79,6 +80,7 @@ $_ADDONLANG['ui.delete'] = 'Delete';
 $_ADDONLANG['ui.delete_confirm'] = 'Permanently delete this issue, its comments and history? This cannot be undone. Consider setting the status to Cancelled instead.';
 $_ADDONLANG['ui.filter'] = 'Filter';
 $_ADDONLANG['ui.reset'] = 'Reset';
+$_ADDONLANG['ui.search'] = 'Search';
 $_ADDONLANG['ui.search_placeholder'] = 'Domain, client name, email or ID';
 $_ADDONLANG['ui.all_types'] = 'All types';
 $_ADDONLANG['ui.all_registrars'] = 'All registrars';
@@ -174,4 +176,5 @@ $_ADDONLANG['widget.problem_transfers'] = 'Problem transfers';
 $_ADDONLANG['widget.other_issues'] = 'Other domain issues';
 $_ADDONLANG['widget.urgent'] = 'Urgent (high priority or due within :days days)';
 $_ADDONLANG['widget.open_tracker'] = 'Open tracker';
+$_ADDONLANG['widget.urgent_short'] = 'Urgent';
 $_ADDONLANG['widget.not_installed'] = 'Domain Issues tables are missing — re-activate the addon.';

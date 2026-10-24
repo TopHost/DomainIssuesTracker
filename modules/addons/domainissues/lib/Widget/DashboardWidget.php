@@ -55,6 +55,10 @@ class DashboardWidget extends AbstractWidget
     }
 
     /**
+     * Same compact counter format as the other TopHost widgets (Bank Reconciliation,
+     * eFactura): large numbers with uppercase labels, then shortcut buttons.
+     * Data and links are unchanged; only the presentation differs.
+     *
      * @param array<string, mixed> $data
      */
     public function generateOutput($data)
@@ -62,7 +66,7 @@ class DashboardWidget extends AbstractWidget
         $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         if (isset($data['error'])) {
-            return '<div class="widget-content-padded text-muted"><i class="fas fa-exclamation-triangle"></i> '
+            return '<div class="widget-content-padded" style="font-size:13px;color:#E26D5C">&#9888; '
                 . $e($data['error']) . '</div>';
         }
 
@@ -71,42 +75,31 @@ class DashboardWidget extends AbstractWidget
         $urgent = (int) $data['urgent'];
         $showOthers = !empty($data['showOthers']) || $others > 0;
 
-        $row = static function (string $label, int $count, string $url, string $iconClass) use ($e): string {
-            $countClass = $count > 0 ? 'text-danger' : 'text-muted';
-
-            return '<a href="' . $e($url) . '" class="list-group-item di-widget-row" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;">'
-                . '<span><i class="fas ' . $iconClass . '" style="width:18px;text-align:center;"></i> ' . $e($label) . '</span>'
-                . '<span class="badge" style="background:' . ($count > 0 ? '#d9534f' : '#999') . ';">' . $count . '</span>'
-                . '</a>';
+        // Big number (coloured only when non-zero) above an uppercase label.
+        $stat = static function (string $label, int $count, string $url, string $colour, string $title = '') use ($e): string {
+            return '<a href="' . $e($url) . '" style="text-decoration:none;color:inherit"' . ($title !== '' ? ' title="' . $e($title) . '"' : '') . '>'
+                . '<div style="font-size:26px;font-weight:700;color:' . ($count > 0 ? $colour : '#03045E') . '">' . $count . '</div>'
+                . '<div style="font-size:11px;text-transform:uppercase;color:#6B7482">' . $e($label) . '</div></a>';
         };
 
-        $html = '<div class="list-group" style="margin:0;">';
-        $html .= $row(
-            Lang::t('widget.problem_transfers'),
-            $transfers,
-            self::MODULE_LINK . '&type=cat:transfers',
-            'fa-exchange-alt'
-        );
+        $html = '<div class="widget-content-padded" style="font-size:13px">';
+        $html .= '<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">';
+        $html .= $stat(Lang::t('widget.problem_transfers'), $transfers, self::MODULE_LINK . '&type=cat:transfers', '#E26D5C');
         if ($showOthers) {
-            $html .= $row(
-                Lang::t('widget.other_issues'),
-                $others,
-                self::MODULE_LINK . '&type=cat:other&show_expired=1&show_redemption=1',
-                'fa-globe'
-            );
+            $html .= $stat(Lang::t('widget.other_issues'), $others, self::MODULE_LINK . '&type=cat:other&show_expired=1&show_redemption=1', '#C98A1A');
         }
-        if ($urgent > 0) {
-            $html .= '<a href="' . $e(self::MODULE_LINK . '&urgent=1&show_expired=1&show_redemption=1') . '" class="list-group-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fff5f5;">'
-                . '<span class="text-danger"><i class="fas fa-fire" style="width:18px;text-align:center;"></i> '
-                . $e(Lang::t('widget.urgent', [':days' => (int) $data['threshold']])) . '</span>'
-                . '<span class="label label-danger">' . $urgent . '</span>'
-                . '</a>';
-        }
+        $html .= $stat(
+            Lang::t('widget.urgent_short'),
+            $urgent,
+            self::MODULE_LINK . '&urgent=1&show_expired=1&show_redemption=1',
+            '#E26D5C',
+            Lang::t('widget.urgent', [':days' => (int) $data['threshold']])
+        );
         $html .= '</div>';
-        $html .= '<div style="padding:6px 10px;text-align:right;">'
-            . '<a href="' . $e(self::MODULE_LINK) . '" class="btn btn-default btn-xs">' . $e(Lang::t('widget.open_tracker')) . '</a> '
-            . '<a href="' . $e(self::MODULE_LINK . '&action=add') . '" class="btn btn-default btn-xs"><i class="fas fa-plus"></i> ' . $e(Lang::t('ui.add_issue')) . '</a>'
-            . '</div>';
+        $html .= '<div>'
+            . '<a href="' . $e(self::MODULE_LINK) . '" class="btn btn-default btn-sm">' . $e(Lang::t('widget.open_tracker')) . '</a> '
+            . '<a href="' . $e(self::MODULE_LINK . '&action=add') . '" class="btn btn-default btn-sm"><i class="fas fa-plus"></i> ' . $e(Lang::t('ui.add_issue')) . '</a>'
+            . '</div></div>';
 
         return $html;
     }

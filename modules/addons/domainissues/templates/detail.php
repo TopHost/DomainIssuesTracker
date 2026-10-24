@@ -40,53 +40,37 @@ $clientName = null;
 if (!$isNew && $issue->client_id !== null) {
     $clientName = IssueRepository::formatClientName($issue->client_firstname, $issue->client_lastname, $issue->client_companyname);
 }
-?>
-<style>
-    .di-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
-    .di-head h2 { margin:0; }
-    .di-panel { border:1px solid #e3e3e3; border-radius:4px; padding:15px; margin-bottom:15px; background:#fff; }
-    .di-panel h4 { margin-top:0; border-bottom:1px solid #eee; padding-bottom:6px; }
-    .di-meta { color:#777; font-size:12px; }
-    .di-comment { border-left:3px solid #ddd; padding:6px 10px; margin-bottom:10px; background:#fafafa; }
-    .di-comment.di-system { border-left-color:#5bc0de; }
-    .di-comment .di-meta { margin-bottom:4px; }
-    .di-comment p { margin:0; white-space:pre-wrap; }
-    .di-log td { font-size:12px; }
-    .di-hint { color:#777; font-size:12px; margin-top:4px; display:block; }
-    .di-lookup-result { margin-top:6px; font-size:12px; }
-    .di-audit dt { font-weight:normal; color:#777; }
-    .di-audit dd { margin-bottom:6px; }
-</style>
 
-<div class="di-head">
-    <h2>
-        <?php if ($isNew): ?>
-            <i class="fas fa-plus"></i> <?= $view->t('ui.add_issue') ?>
-        <?php else: ?>
-            <i class="fas fa-globe"></i> <?= $view->t('detail.title', [':id' => $id, ':domain' => $issue->domain_name]) ?>
-            <?= $view->statusBadge($issue->status) ?> <?= $view->priorityBadge($issue->priority) ?> <?= $view->sourceBadge($issue->source) ?>
-        <?php endif; ?>
-    </h2>
-    <div>
-        <a class="btn btn-default" href="<?= $view->url() ?>"><i class="fas fa-arrow-left"></i> <?= $view->t('ui.back_to_list') ?></a>
-        <?php if (!$isNew): ?>
-            <a class="btn btn-default" href="<?= $view->url(['action' => 'add']) ?>"><i class="fas fa-plus"></i> <?= $view->t('ui.add_issue') ?></a>
-        <?php endif; ?>
-    </div>
+$activeTab = $isNew ? 'add' : (Types::isTransferType((string) $issue->issue_type) ? 'transfers' : 'other');
+?>
+<div class="dit" id="dit-app">
+<?= $view->render('_topbar', ['active' => $activeTab]) ?>
+
+<div class="dit-title">
+    <?php if ($isNew): ?>
+        <h2><?= $view->t('ui.add_issue') ?></h2>
+    <?php else: ?>
+        <h2><?= $view->t('detail.title', [':id' => $id, ':domain' => $issue->domain_name]) ?></h2>
+        <?= $view->statusBadge($issue->status) ?> <?= $view->priorityBadge($issue->priority) ?> <?= $view->sourceBadge($issue->source) ?>
+    <?php endif; ?>
+</div>
+<div class="dit-links">
+    <a class="dit-btn sm" href="<?= $view->url() ?>"><i class="fas fa-arrow-left"></i> <?= $view->t('ui.back_to_list') ?></a>
+    <?php if (!$isNew): ?>
+        <a class="dit-btn sm" href="<?= $view->url(['action' => 'add']) ?>"><i class="fas fa-plus"></i> <?= $view->t('ui.add_issue') ?></a>
+    <?php endif; ?>
 </div>
 
-<?php if ($flash): ?>
-    <div class="alert alert-<?= $view::e($flash['type']) ?>"><?= $view::e($flash['text']) ?></div>
-<?php endif; ?>
+<?= $view->flashBar($flash) ?>
 
 <?php if (!$isNew && $issue->source === Types::SOURCE_AUTOMATIC): ?>
-    <div class="alert alert-info"><i class="fas fa-robot"></i> <?= $view->t('detail.automatic_note') ?></div>
+    <div class="dit-infobar dit-auto-note"><i class="fas fa-robot"></i> <span><?= $view->t('detail.automatic_note') ?></span></div>
 <?php endif; ?>
 
-<div class="row">
-    <div class="col-md-<?= $isNew ? '12' : '7' ?>">
-        <div class="di-panel">
-            <h4><?= $isNew ? $view->t('ui.add_issue') : $view->t('ui.edit_issue') ?></h4>
+<div class="dit-grid-detail<?= $isNew ? ' dit-new' : '' ?>">
+    <div>
+        <div class="dit-card">
+            <h3><?= $isNew ? $view->t('ui.add_issue') : $view->t('ui.edit_issue') ?></h3>
 
             <form method="post" action="<?= $view->url(['action' => 'save']) ?>" class="form-horizontal" id="di-form" autocomplete="off">
                 <?= $view->csrf() ?>
@@ -101,10 +85,10 @@ if (!$isNew && $issue->client_id !== null) {
                                    list="di-domain-list" value="<?= $view::e($input['domain_name']) ?>" placeholder="example.md">
                             <datalist id="di-domain-list"></datalist>
                             <span class="input-group-btn">
-                                <button type="button" class="btn btn-default" id="di-lookup"><i class="fas fa-search"></i> <?= $view->t('ui.lookup') ?></button>
+                                <button type="button" class="dit-btn" id="di-lookup"><i class="fas fa-search"></i> <?= $view->t('ui.lookup') ?></button>
                             </span>
                         </div>
-                        <div class="di-lookup-result" id="di-lookup-result">
+                        <div class="dit-lookup" id="di-lookup-result">
                             <?php if (!$isNew && $issue->domain_id): ?>
                                 <span class="text-success"><i class="fas fa-link"></i>
                                     <?= $view->t('ui.domain_found', [
@@ -117,7 +101,7 @@ if (!$isNew && $issue->client_id !== null) {
                                 </span>
                             <?php endif; ?>
                         </div>
-                        <small class="di-hint"><?= $view->t('ui.domain_help') ?></small>
+                        <small class="dit-hint"><?= $view->t('ui.domain_help') ?></small>
                         <?= $msg('domain_name') ?>
                     </div>
                 </div>
@@ -130,11 +114,11 @@ if (!$isNew && $issue->client_id !== null) {
                                 <input type="text" name="client_id" id="di-client-id" class="form-control" inputmode="numeric"
                                        value="<?= $view::e($input['client_id']) ?>" placeholder="ID (<?= $view->t('ui.optional') ?>)">
                             </div>
-                            <div class="col-xs-8" style="padding-top:7px;" id="di-client-name">
+                            <div class="col-xs-8 dit-client-name" id="di-client-name">
                                 <?= $view->clientLink(!$isNew && $issue->client_id !== null ? (int) $issue->client_id : (ctype_digit((string) $input['client_id']) ? (int) $input['client_id'] : null), $clientName) ?>
                             </div>
                         </div>
-                        <small class="di-hint"><?= $view->t('ui.client_help') ?></small>
+                        <small class="dit-hint"><?= $view->t('ui.client_help') ?></small>
                         <?= $msg('client_id') ?>
                     </div>
                 </div>
@@ -191,7 +175,7 @@ if (!$isNew && $issue->client_id !== null) {
                 </div>
                 <div class="form-group">
                     <div class="col-sm-9 col-sm-offset-3">
-                        <small class="di-hint" style="margin-top:-8px;"><?= $view->t('ui.deadline_help') ?>
+                        <small class="dit-hint"><?= $view->t('ui.deadline_help') ?>
                             <?php if (!$isNew && $issue->deadline): ?> &middot; <?= $view->deadlineCell($issue->deadline, $threshold) ?><?php endif; ?>
                         </small>
                     </div>
@@ -201,99 +185,96 @@ if (!$isNew && $issue->client_id !== null) {
                     <label class="col-sm-3 control-label"><?= $view->t('col.details') ?></label>
                     <div class="col-sm-9">
                         <textarea name="details" class="form-control" rows="5"><?= $view::e($input['details']) ?></textarea>
-                        <small class="di-hint"><?= $view->t('ui.details_help') ?></small>
+                        <small class="dit-hint"><?= $view->t('ui.details_help') ?></small>
                         <?= $msg('details') ?>
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom:0">
                     <div class="col-sm-9 col-sm-offset-3">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="dit-btn primary">
                             <i class="fas fa-save"></i> <?= $isNew ? $view->t('ui.create') : $view->t('ui.save') ?>
                         </button>
-                        <a href="<?= $isNew ? $view->url() : $view->url(['action' => 'view', 'id' => $id]) ?>" class="btn btn-default"><?= $view->t('ui.cancel') ?></a>
+                        <a href="<?= $isNew ? $view->url() : $view->url(['action' => 'view', 'id' => $id]) ?>" class="dit-btn"><?= $view->t('ui.cancel') ?></a>
                     </div>
                 </div>
             </form>
 
             <?php if (!$isNew): ?>
-                <form method="post" action="<?= $view->url(['action' => 'delete']) ?>" class="text-right"
+                <form method="post" action="<?= $view->url(['action' => 'delete']) ?>" class="dit-card-foot" style="justify-content:flex-end"
                       onsubmit="return confirm(<?= $view::e(json_encode(Lang::t('ui.delete_confirm'))) ?>);">
                     <?= $view->csrf() ?>
                     <input type="hidden" name="id" value="<?= $id ?>">
-                    <button type="submit" class="btn btn-link btn-xs text-danger"><i class="fas fa-trash"></i> <?= $view->t('ui.delete') ?></button>
+                    <button type="submit" class="dit-btn danger sm"><i class="fas fa-trash"></i> <?= $view->t('ui.delete') ?></button>
                 </form>
             <?php endif; ?>
         </div>
     </div>
 
     <?php if (!$isNew): ?>
-    <div class="col-md-5">
-        <div class="di-panel">
-            <h4><i class="fas fa-comments"></i> <?= $view->t('detail.comments') ?> <span class="badge"><?= count($comments) ?></span></h4>
+    <div>
+        <div class="dit-card">
+            <div class="dit-card-head"><h3><i class="fas fa-comments"></i> <?= $view->t('detail.comments') ?></h3><span class="dit-badge neutral"><?= count($comments) ?></span></div>
 
             <?php if ($comments === []): ?>
-                <p class="di-meta"><?= $view->t('detail.no_comments') ?></p>
-            <?php endif; ?>
-            <?php foreach ($comments as $c): ?>
-                <div class="di-comment<?= $c->admin_id === null ? ' di-system' : '' ?>">
-                    <div class="di-meta">
-                        <strong><?= $view->adminName($c) ?></strong> &middot; <?= $view->dateTime($c->created_at) ?>
+                <p class="dit-muted"><?= $view->t('detail.no_comments') ?></p>
+            <?php else: ?>
+                <div class="dit-comments">
+                <?php foreach ($comments as $c): ?>
+                    <div class="dit-comment<?= $c->admin_id === null ? ' system' : '' ?>">
+                        <div class="dit-comment-meta"><b><?= $view->adminName($c) ?></b><span><?= $view->dateTime($c->created_at) ?></span></div>
+                        <div class="dit-comment-body"><?= $view::e($c->comment) ?></div>
                     </div>
-                    <p><?= nl2br($view::e($c->comment)) ?></p>
+                <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
+            <?php endif; ?>
 
             <form method="post" action="<?= $view->url(['action' => 'comment']) ?>">
                 <?= $view->csrf() ?>
                 <input type="hidden" name="id" value="<?= $id ?>">
-                <div class="form-group" style="margin-bottom:6px;">
-                    <textarea name="comment" class="form-control" rows="3" required placeholder="<?= $view->t('detail.comment_placeholder') ?>"></textarea>
-                </div>
-                <button type="submit" class="btn btn-default btn-sm"><i class="fas fa-comment"></i> <?= $view->t('detail.add_comment') ?></button>
+                <textarea name="comment" class="form-control" rows="3" required placeholder="<?= $view->t('detail.comment_placeholder') ?>"></textarea>
+                <div style="margin-top:8px"><button type="submit" class="dit-btn blue sm"><i class="fas fa-comment"></i> <?= $view->t('detail.add_comment') ?></button></div>
             </form>
         </div>
 
-        <div class="di-panel">
-            <h4><i class="fas fa-info-circle"></i> <?= $view->t('detail.audit') ?></h4>
-            <dl class="dl-horizontal di-audit" style="margin-bottom:0;">
-                <dt><?= $view->t('col.source') ?></dt><dd><?= $view->sourceBadge($issue->source) ?></dd>
-                <dt><?= $view->t('col.created') ?></dt><dd><?= $view->dateTime($issue->created_at) ?></dd>
-                <dt><?= $view->t('col.created_by') ?></dt>
-                <dd><?= $issue->created_by ? '#' . (int) $issue->created_by : $view->t('ui.system') ?></dd>
-                <dt><?= $view->t('col.updated') ?></dt><dd><?= $view->dateTime($issue->updated_at) ?></dd>
-                <dt><?= $view->t('col.resolved') ?></dt><dd><?= $view->dateTime($issue->resolved_at) ?></dd>
+        <div class="dit-card">
+            <h3><i class="fas fa-info-circle"></i> <?= $view->t('detail.audit') ?></h3>
+            <table class="dit-kv">
+                <tr><th><?= $view->t('col.source') ?></th><td><?= $view->sourceBadge($issue->source) ?></td></tr>
+                <tr><th><?= $view->t('col.created') ?></th><td><?= $view->dateTime($issue->created_at) ?></td></tr>
+                <tr><th><?= $view->t('col.created_by') ?></th><td><?= $issue->created_by ? '#' . (int) $issue->created_by : $view->t('ui.system') ?></td></tr>
+                <tr><th><?= $view->t('col.updated') ?></th><td><?= $view->dateTime($issue->updated_at) ?></td></tr>
+                <tr><th><?= $view->t('col.resolved') ?></th><td><?= $view->dateTime($issue->resolved_at) ?></td></tr>
                 <?php if (!empty($issue->whmcs_domain_status)): ?>
-                    <dt><?= $view->t('col.whmcs_status') ?></dt>
-                    <dd><?= $view::e($issue->whmcs_domain_status) ?>
-                        <?php if (!empty($issue->whmcs_domain_expiry) && !str_starts_with((string) $issue->whmcs_domain_expiry, '0000')): ?>
-                            <span class="di-meta">(exp. <?= $view::e($issue->whmcs_domain_expiry) ?>)</span>
-                        <?php endif; ?>
-                    </dd>
+                    <tr><th><?= $view->t('col.whmcs_status') ?></th>
+                        <td><?= $view::e($issue->whmcs_domain_status) ?>
+                            <?php if (!empty($issue->whmcs_domain_expiry) && !str_starts_with((string) $issue->whmcs_domain_expiry, '0000')): ?>
+                                <span class="dit-muted dit-small">(exp. <?= $view::e($issue->whmcs_domain_expiry) ?>)</span>
+                            <?php endif; ?>
+                        </td></tr>
                 <?php endif; ?>
-            </dl>
+            </table>
         </div>
 
-        <div class="di-panel">
-            <h4><i class="fas fa-history"></i> <?= $view->t('detail.history') ?></h4>
+        <div class="dit-card">
+            <h3><i class="fas fa-history"></i> <?= $view->t('detail.history') ?></h3>
             <?php if ($logs === []): ?>
-                <p class="di-meta"><?= $view->t('detail.no_history') ?></p>
+                <p class="dit-muted"><?= $view->t('detail.no_history') ?></p>
             <?php else: ?>
-                <table class="table table-condensed di-log" style="margin-bottom:0;">
+                <table class="dit-history">
                     <?php foreach ($logs as $l): ?>
                         <tr>
-                            <td class="di-meta" style="white-space:nowrap;"><?= $view->dateTime($l->created_at) ?></td>
-                            <td><?= $view->adminName($l) ?></td>
+                            <td class="dit-nowrap dit-muted"><?= $view->dateTime($l->created_at) ?><br><?= $view->adminName($l) ?></td>
                             <td>
-                                <strong><?= $view->label('field', $l->field) ?></strong>:
+                                <span class="dit-field-name"><?= $view->label('field', $l->field) ?></span><br>
                                 <?php if ($l->field === 'created'): ?>
                                     <?= $view->statusBadge($l->new_value) ?>
                                 <?php elseif ($l->field === 'status'): ?>
-                                    <?= $view->statusBadge($l->old_value) ?> &rarr; <?= $view->statusBadge($l->new_value) ?>
+                                    <?= $view->statusBadge($l->old_value) ?> <span class="dit-arrow">&rarr;</span> <?= $view->statusBadge($l->new_value) ?>
                                 <?php elseif ($l->field === 'priority'): ?>
-                                    <?= $view->priorityBadge($l->old_value) ?> &rarr; <?= $view->priorityBadge($l->new_value) ?>
+                                    <?= $view->priorityBadge($l->old_value) ?> <span class="dit-arrow">&rarr;</span> <?= $view->priorityBadge($l->new_value) ?>
                                 <?php else: ?>
-                                    <code><?= $view::e($l->old_value ?? '—') ?></code> &rarr; <code><?= $view::e($l->new_value ?? '—') ?></code>
+                                    <code><?= $view::e($l->old_value ?? '—') ?></code> <span class="dit-arrow">&rarr;</span> <code><?= $view::e($l->new_value ?? '—') ?></code>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -303,6 +284,7 @@ if (!$isNew && $issue->client_id !== null) {
         </div>
     </div>
     <?php endif; ?>
+</div>
 </div>
 
 <script>
