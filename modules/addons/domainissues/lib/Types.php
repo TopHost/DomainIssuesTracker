@@ -99,6 +99,7 @@ final class Types
         'registrar_mismatch',
         'domain_unavailable',
         'registrar_error',
+        'manual_action',
         'contact_mismatch',
         'nameserver_mismatch',
         'other',

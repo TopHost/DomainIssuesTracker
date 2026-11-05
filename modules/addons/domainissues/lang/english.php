@@ -53,6 +53,7 @@ $_ADDONLANG['subtype.registrar_mismatch'] = 'WHMCS points to another registrar';
 $_ADDONLANG['subtype.domain_unavailable'] = 'Domain not available';
 $_ADDONLANG['subtype.contact_mismatch'] = 'Contact mismatch';
 $_ADDONLANG['subtype.nameserver_mismatch'] = 'Nameserver mismatch';
+$_ADDONLANG['subtype.manual_action'] = 'Manual action required (external registrar)';
 $_ADDONLANG['subtype.other'] = 'Other';
 
 // Log fields

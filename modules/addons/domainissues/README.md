@@ -339,6 +339,10 @@ follow its links.
 
 ## 6. Changelog
 
+* **1.5.1** — failures from the *Manual (registrar extern)* registrar module
+  ("MANUAL ACTION REQUIRED …") get their own subtype **Manual action required**
+  instead of *Registrar error*. No schema change.
+
 * **1.5.0** — daily transfer code reminders (setting *Transfer code reminders*,
   off by default). While an open *Transfer in* case has subtype `invalid_epp` /
   `approval_expired` and its WHMCS domain is still Pending / Pending Transfer,

@@ -23,6 +23,8 @@ final class RegistrarFailureHandler
 {
     /** Keyword heuristics applied to the registrar error text to guess a subtype. */
     private const SUBTYPE_PATTERNS = [
+        // "Manual (registrar extern)" module: the operation is done by hand on purpose
+        'manual_action' => ['manual action required'],
         'invalid_epp' => [
             'epp', 'transfer code', 'trcode', 'trcod ', 'auth code', 'authcode', 'authorization code', 'authorisation code',
             'authorization key', 'authorisation key', 'auth key', 'authkey', 'auth info', 'authinfo', 'transfer key', 'secret',
