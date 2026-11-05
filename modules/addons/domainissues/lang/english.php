@@ -66,6 +66,7 @@ $_ADDONLANG['field.registrar'] = 'Registrar';
 $_ADDONLANG['field.domain_name'] = 'Domain';
 $_ADDONLANG['field.client_id'] = 'Client ID';
 $_ADDONLANG['field.domain_id'] = 'WHMCS domain ID';
+$_ADDONLANG['field.client_reminder'] = 'Transfer code reminder e-mailed to client (no.)';
 
 // Generic UI
 $_ADDONLANG['ui.title'] = 'Domain Issues';
@@ -172,6 +173,9 @@ $_ADDONLANG['comment.auto_resolved'] = 'Automatically resolved: :reason';
 $_ADDONLANG['comment.kept_open'] = 'Not closed automatically: the domain is now ":status" in WHMCS, so the registrar no longer reports on the :type operation, but it was never confirmed as completed. Close this case manually once it is handled.';
 $_ADDONLANG['comment.not_in_whmcs'] = 'no longer in WHMCS';
 $_ADDONLANG['comment.recheck_reason'] = 'the :registrar adapter no longer reports this problem (cron re-check)';
+$_ADDONLANG['comment.reminder_started'] = 'Daily transfer code reminders started: the client is e-mailed once a day (template "Domain Transfer Code Reminder") until a valid code is received, the transfer completes or this case is closed. Each reminder is listed in the History.';
+$_ADDONLANG['comment.reminder_escalated'] = 'Escalated to staff after :count reminder(s): the client has not sent a valid transfer code and the domain expiry is :deadline. Priority set to High; the admins are e-mailed daily. Please contact the client directly.';
+$_ADDONLANG['comment.reminder_no_deadline'] = 'unknown';
 
 // Widget
 $_ADDONLANG['widget.problem_transfers'] = 'Problem transfers';

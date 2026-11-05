@@ -10,6 +10,7 @@
 
 use WHMCS\Module\Addon\DomainIssues\Admin\AdminController;
 use WHMCS\Module\Addon\DomainIssues\Config;
+use WHMCS\Module\Addon\DomainIssues\Cron\TransferCodeReminder;
 use WHMCS\Module\Addon\DomainIssues\Installer;
 
 if (!defined('WHMCS')) {
@@ -33,7 +34,7 @@ function domainissues_config(): array
     return [
         'name' => 'Domain Issues Tracker',
         'description' => 'Tracks domains that need manual attention: blocked transfers (invalid EPP, locked, pending approval), failed renewals / registrations, redemption and WHMCS/registrar mismatches. Dashboard widget + full management page.',
-        'version' => '1.4.0',
+        'version' => '1.5.0',
         'author' => 'IT Concept SRL / TopHost.MD',
         'language' => 'english',
         'fields' => [
@@ -87,6 +88,36 @@ function domainissues_config(): array
                 'Default' => (string) Config::DEFAULTS['scan_max_expired_days'],
                 'Description' => 'Expired / Grace / Redemption domains whose WHMCS expiry date is older than this are skipped by the scan (they are long gone). 0 = no limit.',
             ],
+            // --- Transfer code reminders (1.5.0) ----------------------------------
+            'transfer_reminders' => ['FriendlyName' => 'Transfer code reminders'] + $yesNo('E-mail the CLIENT once a day while an incoming transfer is blocked by a missing, wrong or expired transfer (EPP) code (open "Transfer in" case with subtype invalid_epp / approval_expired, domain still Pending / Pending Transfer). Text: Setup > Email Templates > Domain Messages > "' . TransferCodeReminder::TEMPLATE_NAME . '".'),
+            'reminder_hour' => [
+                'FriendlyName' => 'Reminder hour',
+                'Type' => 'text',
+                'Size' => '3',
+                'Default' => (string) Config::DEFAULTS['reminder_hour'],
+                'Description' => 'Reminders are sent once a day by the first cron run after this hour (server time, 0-23).',
+            ],
+            'reminder_max' => [
+                'FriendlyName' => 'Maximum reminders per case',
+                'Type' => 'text',
+                'Size' => '4',
+                'Default' => (string) Config::DEFAULTS['reminder_max'],
+                'Description' => 'Stop e-mailing the client after this many reminders.',
+            ],
+            'reminder_escalate_days' => [
+                'FriendlyName' => 'Alert staff when domain expires within (days)',
+                'Type' => 'text',
+                'Size' => '4',
+                'Default' => (string) Config::DEFAULTS['reminder_escalate_days'],
+                'Description' => 'From this many days before the domain expiry the admins are e-mailed every day too (priority set to High), so somebody calls the client.',
+            ],
+            'reminder_escalate_after' => [
+                'FriendlyName' => 'Alert staff after (reminders)',
+                'Type' => 'text',
+                'Size' => '4',
+                'Default' => (string) Config::DEFAULTS['reminder_escalate_after'],
+                'Description' => 'Also alert the admins when the client has ignored this many reminders, whatever the expiry date.',
+            ],
             'drop_tables_on_deactivate' => ['FriendlyName' => 'Drop tables on deactivation'] + $yesNo('When ticked, deactivating the addon permanently deletes all issues, comments and history. Leave unticked to keep data across re-activation.'),
         ],
     ];
@@ -99,6 +130,8 @@ function domainissues_activate(): array
 {
     try {
         Installer::install();
+        TransferCodeReminder::ensureTable();
+        TransferCodeReminder::installTemplate();
 
         // Stage 1 categories are on by default; make sure the rows exist even if
         // WHMCS does not persist the yes/no "Default" value on first activation.
@@ -157,6 +190,8 @@ function domainissues_upgrade(array $vars): void
 {
     try {
         Installer::upgrade((string) ($vars['version'] ?? '0'));
+        TransferCodeReminder::ensureTable();      // 1.5.0
+        TransferCodeReminder::installTemplate();  // 1.5.0
     } catch (\Throwable $e) {
         if (function_exists('logModuleCall')) {
             logModuleCall(Config::MODULE, 'upgrade', $vars, $e->getMessage());

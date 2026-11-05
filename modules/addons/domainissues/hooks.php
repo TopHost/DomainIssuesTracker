@@ -5,6 +5,7 @@
  *  - AdminHomeWidgets: dashboard widget with counters (Stage 1)
  *  - AfterRegistrar*Failed: automatic issues from failed registrar operations (Stage 2, gated by settings)
  *  - AfterCronJob: periodic re-check of open automatic issues via registrar adapters (Stage 2)
+ *                  + daily transfer code reminders to clients (1.5.0, when enabled)
  *
  * WHMCS only loads this file while the addon is active, so deactivating the
  * module removes every hook (§8.5). Every handler is wrapped so that an
@@ -12,6 +13,7 @@
  */
 
 use WHMCS\Module\Addon\DomainIssues\Cron\Recheck;
+use WHMCS\Module\Addon\DomainIssues\Cron\TransferCodeReminder;
 use WHMCS\Module\Addon\DomainIssues\Hooks\RegistrarFailureHandler;
 use WHMCS\Module\Addon\DomainIssues\Types;
 use WHMCS\Module\Addon\DomainIssues\Widget\DashboardWidget;
@@ -48,6 +50,13 @@ add_hook('AfterCronJob', 1, static function (array $vars): void {
     } catch (\Throwable $e) {
         if (function_exists('logModuleCall')) {
             logModuleCall('domainissues', 'cron_recheck_fatal', $vars, $e->getMessage());
+        }
+    }
+    try {
+        TransferCodeReminder::runIfDue(); // daily, only when enabled in the settings
+    } catch (\Throwable $e) {
+        if (function_exists('logModuleCall')) {
+            logModuleCall('domainissues', 'transfer_reminders_fatal', $vars, $e->getMessage());
         }
     }
 });

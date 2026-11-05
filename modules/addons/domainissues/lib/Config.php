@@ -37,6 +37,12 @@ final class Config
         'scan_limit' => 200,
         'scan_max_expired_days' => 120,
         'drop_tables_on_deactivate' => false,
+        // Daily client reminders while a transfer waits for a valid transfer code (1.5.0)
+        'transfer_reminders' => false,
+        'reminder_hour' => 10,
+        'reminder_max' => 30,
+        'reminder_escalate_days' => 14,
+        'reminder_escalate_after' => 3,
     ];
 
     /** Internal (non-UI) settings stored alongside the module config. */
@@ -150,6 +156,32 @@ final class Config
     public static function isAdapterEnabled(string $slug): bool
     {
         return self::bool('adapter_' . $slug);
+    }
+
+    public static function transferRemindersEnabled(): bool
+    {
+        return self::bool('transfer_reminders');
+    }
+
+    /** Hour of the day (server time, 0-23) from which the daily reminders are sent. */
+    public static function reminderHour(): int
+    {
+        return min(23, self::int('reminder_hour', 0));
+    }
+
+    public static function reminderMax(): int
+    {
+        return self::int('reminder_max', 1);
+    }
+
+    public static function reminderEscalateDays(): int
+    {
+        return self::int('reminder_escalate_days', 0);
+    }
+
+    public static function reminderEscalateAfter(): int
+    {
+        return self::int('reminder_escalate_after', 1);
     }
 
     public static function dropTablesOnDeactivate(): bool

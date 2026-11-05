@@ -101,7 +101,7 @@ final class Installer
     {
         $schema = Capsule::schema();
         // Drop children first so FK constraints never block the drop.
-        foreach ([IssueRepository::TABLE_COMMENTS, IssueRepository::TABLE_LOG, IssueRepository::TABLE] as $table) {
+        foreach ([\WHMCS\Module\Addon\DomainIssues\Cron\TransferCodeReminder::TABLE, IssueRepository::TABLE_COMMENTS, IssueRepository::TABLE_LOG, IssueRepository::TABLE] as $table) {
             if ($schema->hasTable($table)) {
                 $schema->drop($table);
             }

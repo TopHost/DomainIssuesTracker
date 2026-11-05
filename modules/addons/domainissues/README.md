@@ -339,6 +339,19 @@ follow its links.
 
 ## 6. Changelog
 
+* **1.5.0** — daily transfer code reminders (setting *Transfer code reminders*,
+  off by default). While an open *Transfer in* case has subtype `invalid_epp` /
+  `approval_expired` and its WHMCS domain is still Pending / Pending Transfer,
+  the client gets one e-mail a day (WHMCS template *Domain Transfer Code
+  Reminder*, created on upgrade, editable in Setup > Email Templates > Domain
+  Messages; built-in Romanian text if the template is missing) with the domain
+  expiry date and what to do. From *N* days before expiry, or after *M* ignored
+  reminders, the admins are e-mailed daily as well and the case goes to High
+  priority. Reminders stop when the transfer completes, the order is cancelled,
+  the case is closed or the maximum is reached. Each reminder is in the case
+  History. The failure hook now recognises "transfer code" errors as
+  `invalid_epp`. New table `mod_domainissues_reminders`.
+
 * **1.4.0** — cron: failed operations no longer disappear. An automatic
   *Transfer in*, *Registration failed* or *Renewal failed* case is auto-resolved
   only while the WHMCS domain status confirms the operation (transfer: Active or
@@ -367,3 +380,6 @@ follow its links.
 
 `mod_domainissues_comments` and `mod_domainissues_log` reference the issue with
 `ON DELETE CASCADE`.
+
+`mod_domainissues_reminders` (1.5.0) — per case: `issue_id`, `sent_count`,
+`last_sent_at`, `last_escalated_at`.
