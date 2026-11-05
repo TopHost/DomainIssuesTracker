@@ -23,7 +23,12 @@ final class RegistrarFailureHandler
 {
     /** Keyword heuristics applied to the registrar error text to guess a subtype. */
     private const SUBTYPE_PATTERNS = [
-        'invalid_epp' => ['epp', 'transfer code', 'trcode', 'trcod ', 'auth code', 'authcode', 'authorization code', 'authorisation code', 'auth info', 'authinfo', 'transfer key', 'secret'],
+        'invalid_epp' => [
+            'epp', 'transfer code', 'trcode', 'trcod ', 'auth code', 'authcode', 'authorization code', 'authorisation code',
+            'authorization key', 'authorisation key', 'auth key', 'authkey', 'auth info', 'authinfo', 'transfer key', 'secret',
+            // RoTLD / local wording (Romanian)
+            'cod de autorizare', 'codul de autorizare', 'cheie de autorizare', 'cheia de autorizare', 'cod de transfer', 'codul de transfer', 'cheia de transfer', 'cheie de transfer',
+        ],
         'domain_locked' => ['lock', 'clienttransferprohibited', 'servertransferprohibited', 'prohibited'],
         'pending_approval' => ['pending approval', 'awaiting approval', 'approval', 'confirmation', 'pendingtransfer', 'foa'],
         'approval_expired' => ['expired approval', 'approval expired', 'timed out', 'time out'],
