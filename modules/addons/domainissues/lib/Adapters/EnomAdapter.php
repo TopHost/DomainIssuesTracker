@@ -314,6 +314,47 @@ final class EnomAdapter extends AbstractAdapter
     }
 
     // ---------------------------------------------------------------------
+    // Account balance (1.6.0)
+    // ---------------------------------------------------------------------
+
+    /**
+     * Prepaid balance of the Enom reseller account (command GetBalance).
+     * AvailableBalance is what new orders can use; Balance is the total.
+     *
+     * @return array{balance: float, currency: string, info: string}
+     * @throws \RuntimeException when Enom cannot be asked or gives no balance
+     */
+    public function accountBalance(): array
+    {
+        if (!$this->hasCredentials()) {
+            throw new \RuntimeException('Enom credentials are not configured (Setup > Domain Registrars > Enom)');
+        }
+        $xml = $this->call('GetBalance', []);
+        if ((int) ($xml->ErrCount ?? 0) > 0) {
+            throw new \RuntimeException('Enom GetBalance: ' . $this->errorText($xml));
+        }
+        $available = self::money((string) ($xml->AvailableBalance ?? ''));
+        $total = self::money((string) ($xml->Balance ?? ''));
+        $value = $available ?? $total;
+        if ($value === null) {
+            throw new \RuntimeException('Enom GetBalance answered without a balance');
+        }
+        $info = $available !== null && $total !== null && abs($total - $available) >= 0.01
+            ? sprintf('available %.2f of %.2f USD (the rest is reserved by open orders)', $available, $total)
+            : '';
+
+        return ['balance' => $value, 'currency' => 'USD', 'info' => $info];
+    }
+
+    /** "6,193.37" / "$6193.37" -> 6193.37; null when not a number. */
+    public static function money(string $value): ?float
+    {
+        $value = str_replace([',', '$', ' ', "\xc2\xa0"], '', trim($value));
+
+        return preg_match('/^-?\d+(?:\.\d+)?$/', $value) === 1 ? (float) $value : null;
+    }
+
+    // ---------------------------------------------------------------------
     // Enom API client
     // ---------------------------------------------------------------------
 

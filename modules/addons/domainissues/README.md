@@ -50,6 +50,9 @@ deactivation* is ticked in the settings before deactivating.
 | Re-check interval (hours) | 24 | How often the cron re-checks open automatic issues |
 | Deadline highlight threshold (days) | 7 | Issues with a deadline within N days are red and counted as urgent |
 | Items per page | 25 | List pagination |
+| Registrar balance alerts | off | E-mail the admins when the Enom / Netim balance does not cover the next hours or is below the minimum (§4.4) |
+| Minimum balance / Balance must cover the next (hours) / Check every (hours) | 20 / 24 / 2 | see §4.4 |
+| Registrar prices | empty | optional registrar cost per TLD and year (§4.4) |
 | Drop tables on deactivation | off | Delete all data when the addon is deactivated |
 
 Disabling a category hides it from the *Add issue* form and the widget counters
@@ -288,6 +291,49 @@ wrong transfer code is only visible as "still not in our account".
 
 ---
 
+### 4.4 Registrar balance alerts (1.6.0)
+
+Setting **Registrar balance alerts** (off by default). Every *Check the balance
+every (hours)* (2) the cron asks Enom and Netim for the prepaid balance, with the
+credentials of their registrar modules (only registrars activated in WHMCS):
+
+| Registrar | API call | Currency |
+|---|---|---|
+| Enom | `GetBalance` → `AvailableBalance` (what new orders can use; `Balance` as fallback) | USD |
+| Netim | `queryResellerAccount` of the module's SOAP client → `balance_amount` (other names tried, see `NetimAdapter::BALANCE_METHODS`) | EUR |
+
+It then adds up what falls due within *Balance must cover the next (hours)* (24):
+
+* **renewals due** — Active / Grace domains of that registrar, auto-renew on,
+  next due date from today to the end of the window (paying the renewal invoice
+  sends the renewal to the registrar at once);
+* **paid orders not at the registrar yet** — domains still *Pending* whose
+  registration / transfer invoice is Paid.
+
+Cost of each domain: *Registrar prices* (`enom com 10.50`, `netim fr 8`,
+`enom * 15`, per year × years); without a price, the client price converted with
+the WHMCS currency rates (above the real cost, so the estimate errs on the safe
+side); domains with no price at all are listed and reported as "without price".
+
+The admins receiving *System Emails* get:
+
+| Situation | E-mail |
+|---|---|
+| balance < what is due in the window | "Enom balance X does not cover the next 24 h (Y needed) - top up now" + list of domains |
+| balance < *Minimum balance* (20) | "Enom balance low: X (minimum 20)" |
+| situation unchanged | again after 24 h |
+| gets worse (less money, more due, low → not enough) | again at once |
+| account fine again | one "balance OK again" |
+| balance cannot be read twice in a row | "balance cannot be checked" (once a day) |
+
+The dashboard widget shows each balance and what the next hours need (stored
+values, no API call from the dashboard). From the shell, without e-mails:
+
+```bash
+php modules/addons/domainissues/cli/balance_check.php            # show
+php modules/addons/domainissues/cli/balance_check.php --notify   # like the cron
+```
+
 ## 5. Architecture
 
 ```
@@ -339,6 +385,11 @@ follow its links.
 
 ## 6. Changelog
 
+* **1.6.0** — registrar balance alerts for Enom and Netim (§4.4): balance compared
+  with the renewals due and the paid orders of the next 24 h, plus a minimum;
+  e-mail to the admins, dashboard line, `cli/balance_check.php`. New table
+  `mod_domainissues_balance`, created on upgrade. Off by default.
+
 * **1.5.1** — failures from the *Manual (registrar extern)* registrar module
   ("MANUAL ACTION REQUIRED …") get their own subtype **Manual action required**
   instead of *Registrar error*. No schema change.
@@ -387,3 +438,7 @@ follow its links.
 
 `mod_domainissues_reminders` (1.5.0) — per case: `issue_id`, `sent_count`,
 `last_sent_at`, `last_escalated_at`.
+
+`mod_domainissues_balance` (1.6.0) — per registrar: last `balance`, `forecast`,
+`state` (ok / low / short / error), `checked_at`, and the last alert sent
+(`alert_state`, `alert_balance`, `alert_forecast`, `alert_at`).

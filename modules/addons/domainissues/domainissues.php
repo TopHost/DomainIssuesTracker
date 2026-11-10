@@ -10,6 +10,7 @@
 
 use WHMCS\Module\Addon\DomainIssues\Admin\AdminController;
 use WHMCS\Module\Addon\DomainIssues\Config;
+use WHMCS\Module\Addon\DomainIssues\Cron\BalanceMonitor;
 use WHMCS\Module\Addon\DomainIssues\Cron\TransferCodeReminder;
 use WHMCS\Module\Addon\DomainIssues\Installer;
 
@@ -34,7 +35,7 @@ function domainissues_config(): array
     return [
         'name' => 'Domain Issues Tracker',
         'description' => 'Tracks domains that need manual attention: blocked transfers (invalid EPP, locked, pending approval), failed renewals / registrations, redemption and WHMCS/registrar mismatches. Dashboard widget + full management page.',
-        'version' => '1.5.1',
+        'version' => '1.6.0',
         'author' => 'IT Concept SRL / TopHost.MD',
         'language' => 'english',
         'fields' => [
@@ -118,6 +119,36 @@ function domainissues_config(): array
                 'Default' => (string) Config::DEFAULTS['reminder_escalate_after'],
                 'Description' => 'Also alert the admins when the client has ignored this many reminders, whatever the expiry date.',
             ],
+            // --- Registrar balance alerts (1.6.0) ---------------------------------
+            'balance_monitor' => ['FriendlyName' => 'Registrar balance alerts'] + $yesNo('E-mail the admins (System Emails) when the prepaid balance at Enom / Netim does not cover what falls due in the next hours (renewals due + paid orders not yet sent), or drops below the minimum. Uses the credentials of the registrar modules. Again when the account is fine.'),
+            'balance_threshold' => [
+                'FriendlyName' => 'Minimum balance',
+                'Type' => 'text',
+                'Size' => '6',
+                'Default' => (string) Config::DEFAULTS['balance_threshold'],
+                'Description' => 'Alert below this amount, whatever is due (Enom in USD, Netim in EUR).',
+            ],
+            'balance_window_hours' => [
+                'FriendlyName' => 'Balance must cover the next (hours)',
+                'Type' => 'text',
+                'Size' => '4',
+                'Default' => (string) Config::DEFAULTS['balance_window_hours'],
+                'Description' => 'Renewals whose next due date falls within this window, plus paid registrations / transfers still Pending, are added up and compared with the balance.',
+            ],
+            'balance_check_hours' => [
+                'FriendlyName' => 'Check the balance every (hours)',
+                'Type' => 'text',
+                'Size' => '3',
+                'Default' => (string) Config::DEFAULTS['balance_check_hours'],
+                'Description' => 'One API call per registrar per check (1-24).',
+            ],
+            'balance_prices' => [
+                'FriendlyName' => 'Registrar prices (optional)',
+                'Type' => 'textarea',
+                'Rows' => '5',
+                'Cols' => '40',
+                'Description' => 'Cost per year at the registrar, one per line: <code>enom com 10.50</code>, <code>netim fr 8</code>, <code>enom * 15</code> (any other TLD). Without a price the client price is converted with the WHMCS currency rates (a little above the real cost).',
+            ],
             'drop_tables_on_deactivate' => ['FriendlyName' => 'Drop tables on deactivation'] + $yesNo('When ticked, deactivating the addon permanently deletes all issues, comments and history. Leave unticked to keep data across re-activation.'),
         ],
     ];
@@ -132,6 +163,7 @@ function domainissues_activate(): array
         Installer::install();
         TransferCodeReminder::ensureTable();
         TransferCodeReminder::installTemplate();
+        BalanceMonitor::ensureTable();
 
         // Stage 1 categories are on by default; make sure the rows exist even if
         // WHMCS does not persist the yes/no "Default" value on first activation.
@@ -192,6 +224,7 @@ function domainissues_upgrade(array $vars): void
         Installer::upgrade((string) ($vars['version'] ?? '0'));
         TransferCodeReminder::ensureTable();      // 1.5.0
         TransferCodeReminder::installTemplate();  // 1.5.0
+        BalanceMonitor::ensureTable();            // 1.6.0
     } catch (\Throwable $e) {
         if (function_exists('logModuleCall')) {
             logModuleCall(Config::MODULE, 'upgrade', $vars, $e->getMessage());

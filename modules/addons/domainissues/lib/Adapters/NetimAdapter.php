@@ -405,6 +405,90 @@ final class NetimAdapter extends AbstractAdapter
     }
 
     // ---------------------------------------------------------------------
+    // Account balance (1.6.0)
+    // ---------------------------------------------------------------------
+
+    /** Netim API calls that return the reseller account, most likely first. */
+    public const BALANCE_METHODS = ['queryResellerAccount', 'resellerAccountInfo', 'queryAccount', 'accountInfo'];
+
+    /** Field names that may carry the prepaid balance. */
+    private const BALANCE_FIELDS = ['balance_amount', 'balanceAmount', 'BALANCE_AMOUNT', 'balance', 'BALANCE', 'solde', 'amount'];
+
+    /**
+     * Prepaid balance of the Netim reseller account, through the SOAP client of
+     * the netim registrar module (queryResellerAccount in the Netim API).
+     *
+     * @return array{balance: float, currency: string, info: string}
+     * @throws \RuntimeException when Netim cannot be asked or gives no balance
+     */
+    public function accountBalance(): array
+    {
+        $api = $this->api();
+        $errors = [];
+        foreach (self::BALANCE_METHODS as $method) {
+            if (!method_exists($api, $method) && !method_exists($api, '__call')) {
+                continue;
+            }
+            try {
+                $result = $api->{$method}();
+            } catch (\Throwable $e) {
+                $this->log($method, [], $e->getMessage());
+                if ($this->isTransportError($e) && stripos($e->getMessage(), 'function') === false && stripos($e->getMessage(), 'method') === false) {
+                    throw new \RuntimeException('Netim ' . $method . ' failed: ' . $e->getMessage(), 0, $e);
+                }
+                $errors[] = $method . ': ' . $e->getMessage();
+                continue;
+            }
+            $this->log($method, [], $this->dump($result));
+            $data = self::flatten($result);
+            $balance = null;
+            foreach (self::BALANCE_FIELDS as $field) {
+                $key = strtolower($field);
+                if (isset($data[$key]) && is_numeric(str_replace(',', '.', (string) $data[$key]))) {
+                    $balance = (float) str_replace(',', '.', (string) $data[$key]);
+                    break;
+                }
+            }
+            if ($balance === null) {
+                $errors[] = $method . ': no balance field in ' . implode(', ', array_keys($data));
+                continue;
+            }
+            $currency = strtoupper((string) ($data['currency'] ?? $data['devise'] ?? 'EUR'));
+            $low = $data['balance_low_limit'] ?? null;
+            $info = is_numeric($low) ? sprintf('Netim low limit set at Netim: %.2f %s', (float) $low, $currency) : '';
+
+            return ['balance' => $balance, 'currency' => preg_match('/^[A-Z]{3}$/', $currency) ? $currency : 'EUR', 'info' => $info];
+        }
+
+        throw new \RuntimeException('Netim client gives no account balance (' . ($errors !== [] ? implode('; ', $errors) : 'none of ' . implode(', ', self::BALANCE_METHODS) . ' exists in ' . get_class($api)) . ')');
+    }
+
+    /**
+     * Nested stdClass / array -> one level, lower-case keys (first value wins).
+     *
+     * @return array<string, scalar>
+     */
+    private static function flatten(mixed $value, int $depth = 0): array
+    {
+        if (is_object($value)) {
+            $value = get_object_vars($value);
+        }
+        if (!is_array($value) || $depth > 4) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $k => $v) {
+            if (is_scalar($v)) {
+                $out[strtolower((string) $k)] ??= $v;
+            } else {
+                $out += self::flatten($v, $depth + 1);
+            }
+        }
+
+        return $out;
+    }
+
+    // ---------------------------------------------------------------------
     // Netim API client (from the registrar module)
     // ---------------------------------------------------------------------
 

@@ -43,6 +43,11 @@ final class Config
         'reminder_max' => 30,
         'reminder_escalate_days' => 14,
         'reminder_escalate_after' => 3,
+        // Registrar balance alerts (1.6.0)
+        'balance_monitor' => false,
+        'balance_threshold' => 20,
+        'balance_window_hours' => 24,
+        'balance_check_hours' => 2,
     ];
 
     /** Internal (non-UI) settings stored alongside the module config. */
@@ -182,6 +187,30 @@ final class Config
     public static function reminderEscalateAfter(): int
     {
         return self::int('reminder_escalate_after', 1);
+    }
+
+    public static function balanceMonitorEnabled(): bool
+    {
+        return self::bool('balance_monitor');
+    }
+
+    /** Minimum balance, in each registrar's own currency. */
+    public static function balanceThreshold(): float
+    {
+        $value = str_replace(',', '.', trim((string) (self::raw('balance_threshold') ?? '')));
+
+        return is_numeric($value) ? max(0.0, (float) $value) : (float) self::DEFAULTS['balance_threshold'];
+    }
+
+    /** The balance must cover what falls due within this many hours. */
+    public static function balanceWindowHours(): int
+    {
+        return min(24 * 31, self::int('balance_window_hours', 1));
+    }
+
+    public static function balanceCheckHours(): int
+    {
+        return min(24, self::int('balance_check_hours', 1));
     }
 
     public static function dropTablesOnDeactivate(): bool

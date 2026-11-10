@@ -6,6 +6,7 @@ namespace WHMCS\Module\Addon\DomainIssues\Widget;
 
 use WHMCS\Module\AbstractWidget;
 use WHMCS\Module\Addon\DomainIssues\Config;
+use WHMCS\Module\Addon\DomainIssues\Cron\BalanceMonitor;
 use WHMCS\Module\Addon\DomainIssues\Installer;
 use WHMCS\Module\Addon\DomainIssues\IssueRepository;
 use WHMCS\Module\Addon\DomainIssues\Lang;
@@ -48,6 +49,7 @@ class DashboardWidget extends AbstractWidget
                 'showOthers' => Config::hasOtherCategoriesEnabled(),
                 'urgent' => $repo->countUrgent($threshold),
                 'threshold' => $threshold,
+                'balances' => Config::balanceMonitorEnabled() ? BalanceMonitor::stored() : [],
             ];
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
@@ -96,11 +98,50 @@ class DashboardWidget extends AbstractWidget
             Lang::t('widget.urgent', [':days' => (int) $data['threshold']])
         );
         $html .= '</div>';
+        $html .= $this->balanceLine((array) ($data['balances'] ?? []), $e);
         $html .= '<div>'
             . '<a href="' . $e(self::MODULE_LINK) . '" class="btn btn-default btn-sm">' . $e(Lang::t('widget.open_tracker')) . '</a> '
             . '<a href="' . $e(self::MODULE_LINK . '&action=add') . '" class="btn btn-default btn-sm"><i class="fas fa-plus"></i> ' . $e(Lang::t('ui.add_issue')) . '</a>'
             . '</div></div>';
 
         return $html;
+    }
+
+    /**
+     * One line per registrar account: balance and what the next hours need
+     * (values stored by the cron; no API call from the dashboard).
+     *
+     * @param list<object> $rows
+     */
+    private function balanceLine(array $rows, callable $e): string
+    {
+        if ($rows === []) {
+            return '';
+        }
+        $parts = [];
+        foreach ($rows as $row) {
+            $name = BalanceMonitor::label((string) $row->registrar);
+            $when = $row->checked_at !== null ? date('d.m H:i', strtotime((string) $row->checked_at)) : '';
+            if ((string) $row->state === BalanceMonitor::STATE_ERROR || $row->balance === null) {
+                $parts[] = '<span style="color:#C98A1A" title="' . $e((string) $row->error) . '">' . $e($name) . ': ' . $e(Lang::t('widget.balance_unknown')) . '</span>';
+                continue;
+            }
+            $colour = match ((string) $row->state) {
+                BalanceMonitor::STATE_SHORT => '#E26D5C',
+                BalanceMonitor::STATE_LOW => '#C98A1A',
+                default => '#2E8540',
+            };
+            $title = Lang::t('widget.balance_title', [
+                ':hours' => Config::balanceWindowHours(),
+                ':forecast' => number_format((float) $row->forecast, 2, '.', ' ') . ' ' . $row->currency,
+                ':count' => (int) $row->forecast_count,
+                ':when' => $when,
+            ]);
+            $parts[] = '<span style="color:' . $colour . ';font-weight:600" title="' . $e($title) . '">' . $e($name) . ': '
+                . $e(number_format((float) $row->balance, 2, '.', ' ') . ' ' . $row->currency) . '</span>'
+                . ' <span style="color:#6B7482">/ ' . $e(Config::balanceWindowHours() . 'h: ' . number_format((float) $row->forecast, 2, '.', ' ')) . '</span>';
+        }
+
+        return '<div style="margin:0 0 10px;font-size:12px">' . $e(Lang::t('widget.balance')) . ' ' . implode(' &middot; ', $parts) . '</div>';
     }
 }
