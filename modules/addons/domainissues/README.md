@@ -326,7 +326,7 @@ The admins receiving *System Emails* get:
 | account fine again | one "balance OK again" |
 | balance cannot be read twice in a row | "balance cannot be checked" (once a day) |
 
-The dashboard widget shows each balance and what the next hours need (stored
+The dashboard widget shows each balance as a small block (green: fine, amber: below the minimum or cannot be checked, red: does not cover the window) with what the next hours need (stored
 values, no API call from the dashboard). From the shell, without e-mails:
 
 ```bash
@@ -384,6 +384,10 @@ follow its links.
 ---
 
 ## 6. Changelog
+
+* **1.6.1** — dashboard widget: one small block per registrar balance (amount in
+  large coloured digits, green / amber / red by state, "due next 24h" below),
+  same style as the counters. Display only.
 
 * **1.6.0** — registrar balance alerts for Enom and Netim (§4.4): balance compared
   with the renewals due and the paid orders of the next 24 h, plus a minimum;

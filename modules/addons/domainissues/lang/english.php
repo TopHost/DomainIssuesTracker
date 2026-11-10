@@ -185,6 +185,7 @@ $_ADDONLANG['widget.urgent'] = 'Urgent (high priority or due within :days days)'
 $_ADDONLANG['widget.open_tracker'] = 'Open tracker';
 $_ADDONLANG['widget.urgent_short'] = 'Urgent';
 $_ADDONLANG['widget.balance'] = 'Registrar balance:';
+$_ADDONLANG['widget.balance_due'] = 'due next :hoursh: :amount';
 $_ADDONLANG['widget.balance_unknown'] = 'cannot be checked';
 $_ADDONLANG['widget.balance_title'] = 'Due in the next :hours h: :forecast (:count domains). Checked :when';
 $_ADDONLANG['widget.not_installed'] = 'Domain Issues tables are missing — re-activate the addon.';

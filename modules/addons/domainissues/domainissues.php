@@ -35,7 +35,7 @@ function domainissues_config(): array
     return [
         'name' => 'Domain Issues Tracker',
         'description' => 'Tracks domains that need manual attention: blocked transfers (invalid EPP, locked, pending approval), failed renewals / registrations, redemption and WHMCS/registrar mismatches. Dashboard widget + full management page.',
-        'version' => '1.6.0',
+        'version' => '1.6.1',
         'author' => 'IT Concept SRL / TopHost.MD',
         'language' => 'english',
         'fields' => [

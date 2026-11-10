@@ -108,8 +108,9 @@ class DashboardWidget extends AbstractWidget
     }
 
     /**
-     * One line per registrar account: balance and what the next hours need
-     * (values stored by the cron; no API call from the dashboard).
+     * One small block per registrar account, same style as the counters above:
+     * balance (coloured by state), registrar name and what the next hours need.
+     * Values stored by the cron; no API call from the dashboard.
      *
      * @param list<object> $rows
      */
@@ -118,30 +119,41 @@ class DashboardWidget extends AbstractWidget
         if ($rows === []) {
             return '';
         }
-        $parts = [];
+        $hours = Config::balanceWindowHours();
+        $money = static fn ($v): string => number_format((float) $v, 2, '.', ' ');
+        $blocks = '';
         foreach ($rows as $row) {
             $name = BalanceMonitor::label((string) $row->registrar);
             $when = $row->checked_at !== null ? date('d.m H:i', strtotime((string) $row->checked_at)) : '';
-            if ((string) $row->state === BalanceMonitor::STATE_ERROR || $row->balance === null) {
-                $parts[] = '<span style="color:#C98A1A" title="' . $e((string) $row->error) . '">' . $e($name) . ': ' . $e(Lang::t('widget.balance_unknown')) . '</span>';
-                continue;
-            }
-            $colour = match ((string) $row->state) {
-                BalanceMonitor::STATE_SHORT => '#E26D5C',
-                BalanceMonitor::STATE_LOW => '#C98A1A',
-                default => '#2E8540',
+            $error = (string) $row->state === BalanceMonitor::STATE_ERROR || $row->balance === null;
+            [$colour, $border, $background] = match (true) {
+                $error => ['#C98A1A', '#F0D9A8', '#FFF9EC'],
+                (string) $row->state === BalanceMonitor::STATE_SHORT => ['#E26D5C', '#F3C4BD', '#FDF1EF'],
+                (string) $row->state === BalanceMonitor::STATE_LOW => ['#C98A1A', '#F0D9A8', '#FFF9EC'],
+                default => ['#2E8540', '#CFE5D3', '#F3FAF4'],
             };
-            $title = Lang::t('widget.balance_title', [
-                ':hours' => Config::balanceWindowHours(),
-                ':forecast' => number_format((float) $row->forecast, 2, '.', ' ') . ' ' . $row->currency,
-                ':count' => (int) $row->forecast_count,
-                ':when' => $when,
-            ]);
-            $parts[] = '<span style="color:' . $colour . ';font-weight:600" title="' . $e($title) . '">' . $e($name) . ': '
-                . $e(number_format((float) $row->balance, 2, '.', ' ') . ' ' . $row->currency) . '</span>'
-                . ' <span style="color:#6B7482">/ ' . $e(Config::balanceWindowHours() . 'h: ' . number_format((float) $row->forecast, 2, '.', ' ')) . '</span>';
+            if ($error) {
+                $amount = '?';
+                $sub = Lang::t('widget.balance_unknown');
+                $title = (string) $row->error;
+            } else {
+                $amount = $money($row->balance) . ' <span style="font-size:13px;font-weight:600">' . $e((string) $row->currency) . '</span>';
+                $sub = Lang::t('widget.balance_due', [':hours' => $hours, ':amount' => $money($row->forecast) . ' ' . $row->currency]);
+                $title = Lang::t('widget.balance_title', [
+                    ':hours' => $hours,
+                    ':forecast' => $money($row->forecast) . ' ' . $row->currency,
+                    ':count' => (int) $row->forecast_count,
+                    ':when' => $when,
+                ]);
+            }
+            $blocks .= '<div title="' . $e($title) . '" style="flex:1 1 140px;min-width:0;border:1px solid ' . $border . ';background:' . $background . ';border-radius:6px;padding:8px 12px">'
+                . '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:#6B7482;font-weight:600">' . $e($name) . '</div>'
+                . '<div style="font-size:22px;font-weight:700;line-height:1.25;color:' . $colour . ';white-space:nowrap">' . $amount . '</div>'
+                . '<div style="font-size:11px;color:#6B7482;white-space:nowrap">' . $e($sub) . '</div>'
+                . '</div>';
         }
 
-        return '<div style="margin:0 0 10px;font-size:12px">' . $e(Lang::t('widget.balance')) . ' ' . implode(' &middot; ', $parts) . '</div>';
+        return '<div style="font-size:11px;text-transform:uppercase;color:#6B7482;margin:2px 0 6px">' . $e(rtrim(Lang::t('widget.balance'), ':')) . '</div>'
+            . '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' . $blocks . '</div>';
     }
 }
